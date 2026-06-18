@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DBug Hunter — détecteur de bugs en base de données</title>
+  <meta name="description" content="Analysez une base SQLite et détectez en un clic les bugs d'intégrité, de qualité et de schéma.">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐛</text></svg>">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🐛</span>
+      <div>
+        <h1>DBug&nbsp;Hunter</h1>
+        <p class="tagline">Détecteur de bugs &amp; de qualité de données pour bases SQLite</p>
+      </div>
+    </div>
+    <a class="gh" href="https://github.com/baluva/dbug-hunter" target="_blank" rel="noopener">GitHub ↗</a>
+  </header>
+
+  <main>
+    <section class="intro">
+      <h2>Repérez les bugs cachés dans votre base</h2>
+      <p>Déposez un fichier <code>.sqlite</code> / <code>.db</code> : DBug Hunter exécute
+        une batterie de contrôles d'intégrité référentielle, de qualité de données et de
+        schéma, puis renvoie un rapport classé par gravité. Aucune donnée n'est conservée.</p>
+    </section>
+
+    <section id="dropzone" class="dropzone" tabindex="0">
+      <input type="file" id="fileInput" accept=".db,.sqlite,.sqlite3,.db3" hidden>
+      <div class="dz-inner">
+        <div class="dz-icon">📂</div>
+        <p class="dz-title">Glissez votre base ici</p>
+        <p class="dz-sub">ou <button type="button" id="browseBtn" class="link">parcourez vos fichiers</button></p>
+        <p class="dz-or">— ou —</p>
+        <button type="button" id="demoBtn" class="btn-demo">▶ Scanner la base de démo</button>
+      </div>
+    </section>
+
+    <section id="status" class="status" hidden></section>
+
+    <section id="results" class="results" hidden>
+      <div class="results-head">
+        <div class="score-card">
+          <div id="scoreRing" class="score-ring">
+            <span id="scoreValue">--</span>
+            <small>/100</small>
+          </div>
+          <p class="score-label">Santé de la base</p>
+        </div>
+        <div class="meta">
+          <h3 id="dbName">—</h3>
+          <p id="dbMeta" class="db-meta">—</p>
+          <div class="counts" id="counts"></div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="filters" id="severityFilters">
+          <button class="chip active" data-sev="all">Tout</button>
+          <button class="chip" data-sev="critical">Critiques</button>
+          <button class="chip" data-sev="warning">Avertissements</button>
+          <button class="chip" data-sev="info">Infos</button>
+        </div>
+        <input type="search" id="search" class="search" placeholder="Filtrer (table, colonne, mot-clé)…">
+      </div>
+
+      <div id="findings" class="findings"></div>
+
+      <details class="tables-block">
+        <summary>Tables analysées (<span id="tableCount">0</span>)</summary>
+        <div id="tables" class="tables"></div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>DBug Hunter · Python · FastAPI — par
+      <a href="https://github.com/baluva" target="_blank" rel="noopener">Louey Barbirou</a></p>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
