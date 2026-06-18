@@ -2,10 +2,13 @@
 
 > Détecteur de bugs et de qualité de données pour bases **SQLite** — déposez une base, obtenez un rapport des problèmes classés par gravité.
 
+[![Démo en ligne](https://img.shields.io/badge/🤗%20Démo-en%20ligne-FFD21E)](https://louey9999-dbug-hunter.hf.space)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
+
+**🔗 Démo en ligne : https://louey9999-dbug-hunter.hf.space**
 
 DBug Hunter est une petite **application web en Python** qui inspecte une base de
 données SQLite et débusque les bugs courants : intégrité référentielle rompue,
