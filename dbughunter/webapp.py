@@ -2,7 +2,8 @@
 
 Routes
 ------
-GET  /             -> the single-page UI
+GET  /             -> the marketing landing page
+GET  /app          -> the single-page scanner UI
 POST /api/scan     -> upload a .db/.sqlite file, get a JSON report back
 GET  /api/demo     -> scan the bundled buggy demo database
 GET  /api/health   -> liveness probe
@@ -22,6 +23,7 @@ from .detector import scan_database
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(BASE_DIR, "web")
+LANDING_DIR = os.path.join(BASE_DIR, "landing")
 DEMO_DB = os.path.join(BASE_DIR, "data", "demo_buggy.db")
 
 MAX_BYTES = 50 * 1024 * 1024  # 50 MB upload ceiling
@@ -36,7 +38,12 @@ def _looks_like_sqlite(path: str) -> bool:
 
 
 @app.get("/", include_in_schema=False)
-def index() -> FileResponse:
+def landing() -> FileResponse:
+    return FileResponse(os.path.join(LANDING_DIR, "index.html"))
+
+
+@app.get("/app", include_in_schema=False)
+def scanner() -> FileResponse:
     return FileResponse(os.path.join(WEB_DIR, "index.html"))
 
 
