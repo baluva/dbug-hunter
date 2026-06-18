@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DBug Hunter — débusquez les bugs cachés de votre base SQLite</title>
+  <meta name="description" content="Déposez un fichier SQLite, obtenez un rapport des bugs classés par gravité et un score de santé sur 100. 14 contrôles, aucune donnée conservée." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐛</text></svg>" />
+
+  <meta property="og:title" content="DBug Hunter — détecteur de bugs en base SQLite" />
+  <meta property="og:description" content="Rapport des bugs d'intégrité, qualité et schéma + score de santé /100. Démo en ligne, open source." />
+  <meta property="og:type" content="website" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: "#117345", 700: "#0E5D38", 400: "#34D399" },
+            blue: { DEFAULT: "#2563EB", 50: "#EFF6FF" },
+            navy: "#1A1A2E", charcoal: "#3B3B3B",
+            ink: "#3A3A3A", slate: "#475569", muted: "#94A3B8",
+            mist: "#F8FBFF", sky: { 1: "#EFF6FF", 2: "#EAF0F6", 3: "#E9F7FD" },
+            line: { DEFAULT: "#C9D3DF", strong: "#9BADC2" },
+            danger: "#EF4B4B", amber: "#F59E0B", purple: "#A772DF",
+          },
+          fontFamily: {
+            sans: ["Inter", "system-ui", "sans-serif"],
+            mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    body { font-family: Inter, system-ui, sans-serif; }
+    [data-reveal]{opacity:0;transform:translateY(16px);transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1)}
+    [data-reveal].in{opacity:1;transform:none}
+    #nav.scrolled{background:rgba(255,255,255,.82);backdrop-filter:blur(10px);border-bottom:1px solid #C9D3DF}
+    #nav.scrolled .nav-link{color:#475569}
+    #nav.scrolled .nav-logo{color:#3A3A3A}
+    .grid-bg{background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.06) 1px, transparent 0);background-size:28px 28px}
+    #ringFg{transition:stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1)}
+    @media (prefers-reduced-motion:reduce){[data-reveal]{opacity:1;transform:none;transition:none}#ringFg{transition:none}}
+  </style>
+</head>
+<body class="bg-mist text-ink antialiased">
+
+  <!-- NAV -->
+  <header id="nav" class="fixed inset-x-0 top-0 z-50 transition-colors duration-300">
+    <nav class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <a href="#" class="nav-logo flex items-center gap-2 font-semibold text-white">
+        <span class="grid h-8 w-8 place-items-center rounded-lg bg-brand text-base">🐛</span>
+        DBug&nbsp;Hunter
+      </a>
+      <div class="hidden items-center gap-8 text-sm md:flex">
+        <a href="#bugs" class="nav-link text-white/80 hover:text-white">Bugs détectés</a>
+        <a href="#how" class="nav-link text-white/80 hover:text-white">Comment ça marche</a>
+        <a href="#dev" class="nav-link text-white/80 hover:text-white">Développeurs</a>
+        <a href="#faq" class="nav-link text-white/80 hover:text-white">FAQ</a>
+      </div>
+      <a href="https://louey9999-dbug-hunter.hf.space" target="_blank" rel="noopener"
+         class="rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700">Démo en ligne ↗</a>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section class="grid-bg relative overflow-hidden bg-navy pt-32 pb-24">
+    <div class="pointer-events-none absolute left-1/2 top-16 h-80 w-[44rem] -translate-x-1/2 rounded-full bg-brand/20 blur-3xl"></div>
+    <div class="relative mx-auto grid max-w-6xl items-center gap-12 px-6 lg:grid-cols-2">
+      <!-- left -->
+      <div>
+        <p data-reveal class="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-brand-400">
+          <span class="h-1.5 w-1.5 rounded-full bg-brand-400"></span> Qualité de données · SQLite
+        </p>
+        <h1 data-reveal class="text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-5xl md:text-6xl">
+          Les bugs cachés de votre base, <span class="text-brand-400">débusqués.</span>
+        </h1>
+        <p data-reveal class="mt-6 max-w-xl text-lg leading-relaxed text-white/70">
+          Déposez un fichier SQLite et DBug Hunter exécute une batterie de contrôles
+          d'intégrité, de qualité et de schéma — puis renvoie un rapport classé par
+          gravité et un <span class="font-semibold text-white">score de santé sur 100</span>.
+        </p>
+        <div data-reveal class="mt-9 flex flex-col gap-3 sm:flex-row">
+          <a href="https://louey9999-dbug-hunter.hf.space" target="_blank" rel="noopener"
+             class="rounded-xl bg-brand px-6 py-3 text-center font-medium text-white transition hover:bg-brand-700">▶ Essayer la démo</a>
+          <a href="https://github.com/baluva/dbug-hunter" target="_blank" rel="noopener"
+             class="rounded-xl border border-white/15 px-6 py-3 text-center font-medium text-white/90 transition hover:bg-white/5">Voir le code sur GitHub</a>
+        </div>
+        <p data-reveal class="mt-6 text-xs text-white/40">14 contrôles · 4 familles · aucune donnée conservée</p>
+      </div>
+
+      <!-- right: mock result card -->
+      <div data-reveal class="relative">
+        <div class="rounded-2xl border border-line bg-white p-6 shadow-2xl shadow-black/30">
+          <div class="flex items-center justify-between border-b border-line pb-4">
+            <div class="flex items-center gap-2 text-sm font-medium text-ink">
+              <span>🗄️</span> demo_buggy.db
+            </div>
+            <span class="rounded-full bg-sky-2 px-2 py-0.5 text-xs text-slate">7 tables · 1 248 lignes</span>
+          </div>
+          <div class="flex items-center gap-5 py-5">
+            <div class="relative grid h-28 w-28 shrink-0 place-items-center">
+              <svg viewBox="0 0 120 120" class="h-28 w-28 -rotate-90">
+                <circle cx="60" cy="60" r="52" stroke="#EAF0F6" stroke-width="12" fill="none" />
+                <circle id="ringFg" cx="60" cy="60" r="52" stroke="#117345" stroke-width="12" fill="none"
+                        stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                        data-ring="72" />
+              </svg>
+              <div class="absolute text-center">
+                <div class="text-2xl font-bold text-ink"><span data-count="72">0</span><span class="text-sm text-muted">/100</span></div>
+                <div class="text-[10px] uppercase tracking-wide text-muted">santé</div>
+              </div>
+            </div>
+            <div class="space-y-2 text-sm">
+              <div class="flex items-center gap-2"><span class="inline-block h-2 w-2 rounded-full bg-danger"></span> <span class="font-semibold text-ink">3</span> <span class="text-slate">critiques</span></div>
+              <div class="flex items-center gap-2"><span class="inline-block h-2 w-2 rounded-full bg-amber"></span> <span class="font-semibold text-ink">9</span> <span class="text-slate">avertissements</span></div>
+              <div class="flex items-center gap-2"><span class="inline-block h-2 w-2 rounded-full bg-blue"></span> <span class="font-semibold text-ink">5</span> <span class="text-slate">infos</span></div>
+            </div>
+          </div>
+          <div class="space-y-2 border-t border-line pt-4">
+            <div class="flex items-start gap-3 rounded-lg bg-danger/5 p-3">
+              <span class="mt-0.5 rounded bg-danger/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-danger">critique</span>
+              <p class="text-xs leading-relaxed text-slate"><span class="font-medium text-ink">orders.user_id</span> — 12 clés étrangères orphelines</p>
+            </div>
+            <div class="flex items-start gap-3 rounded-lg bg-amber/5 p-3">
+              <span class="mt-0.5 rounded bg-amber/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber">alerte</span>
+              <p class="text-xs leading-relaxed text-slate"><span class="font-medium text-ink">users.email</span> — 4 adresses invalides</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="bg-navy py-16">
+    <div class="mx-auto grid max-w-5xl grid-cols-2 gap-10 px-6 text-center md:grid-cols-4">
+      <div data-reveal data-count="14"  class="text-4xl font-bold text-brand-400">0</div>
+      <div data-reveal data-count="4"   class="text-4xl font-bold text-brand-400">0</div>
+      <div data-reveal data-count="100" class="text-4xl font-bold text-brand-400">0</div>
+      <div data-reveal data-count="0"   class="text-4xl font-bold text-brand-400">0</div>
+    </div>
+    <div class="mx-auto grid max-w-5xl grid-cols-2 gap-10 px-6 text-center text-sm text-white/60 md:grid-cols-4">
+      <div>contrôles automatiques</div>
+      <div>familles de bugs</div>
+      <div>score de santé max</div>
+      <div>donnée conservée</div>
+    </div>
+  </section>
+
+  <!-- BUGS / FEATURES -->
+  <section id="bugs" class="bg-mist py-20 md:py-28">
+    <div class="mx-auto max-w-6xl px-6">
+      <p data-reveal class="text-center text-xs font-medium uppercase tracking-wider text-brand">Ce que DBug Hunter trouve</p>
+      <h2 data-reveal class="mx-auto mt-3 max-w-2xl text-center text-3xl font-semibold tracking-tight text-ink md:text-4xl">
+        14 contrôles, 4 familles de bugs
+      </h2>
+      <p data-reveal class="mx-auto mt-4 max-w-xl text-center text-lg leading-relaxed text-slate">
+        Chaque problème est remonté avec sa table, sa colonne, un exemple et une gravité.
+      </p>
+
+      <div class="mt-14 grid gap-6 md:grid-cols-2">
+        <!-- Intégrité -->
+        <article data-reveal class="rounded-2xl border border-line bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-900/5">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-xl bg-danger/10 text-xl">🔗</div>
+            <h3 class="text-lg font-semibold text-ink">Intégrité référentielle</h3>
+          </div>
+          <ul class="mt-4 space-y-2 text-slate">
+            <li class="flex gap-2"><span class="text-danger">•</span> Clés étrangères orphelines (parent inexistant)</li>
+            <li class="flex gap-2"><span class="text-amber">•</span> Lignes strictement dupliquées</li>
+            <li class="flex gap-2"><span class="text-amber">•</span> Doublons sur colonnes uniques (email, sku…)</li>
+          </ul>
+        </article>
+        <!-- Qualité -->
+        <article data-reveal class="rounded-2xl border border-line bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-900/5">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-xl bg-brand/10 text-xl">🧪</div>
+            <h3 class="text-lg font-semibold text-ink">Qualité des données</h3>
+          </div>
+          <ul class="mt-4 space-y-2 text-slate">
+            <li class="flex gap-2"><span class="text-danger">•</span> Types de stockage mélangés dans une colonne</li>
+            <li class="flex gap-2"><span class="text-amber">•</span> E-mails invalides · dates invalides ou futures</li>
+            <li class="flex gap-2"><span class="text-amber">•</span> Valeurs négatives suspectes · NULL manquants</li>
+            <li class="flex gap-2"><span class="text-blue">•</span> Espaces superflus, chaînes vides, outliers (IQR)</li>
+          </ul>
+        </article>
+        <!-- Schéma -->
+        <article data-reveal class="rounded-2xl border border-line bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-900/5">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-xl bg-blue/10 text-xl">🧱</div>
+            <h3 class="text-lg font-semibold text-ink">Schéma</h3>
+          </div>
+          <ul class="mt-4 space-y-2 text-slate">
+            <li class="flex gap-2"><span class="text-amber">•</span> Table sans clé primaire</li>
+            <li class="flex gap-2"><span class="text-blue">•</span> Table vide</li>
+          </ul>
+        </article>
+        <!-- Performance -->
+        <article data-reveal class="rounded-2xl border border-line bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-900/5">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-xl bg-purple/10 text-xl">⚡</div>
+            <h3 class="text-lg font-semibold text-ink">Performance</h3>
+          </div>
+          <ul class="mt-4 space-y-2 text-slate">
+            <li class="flex gap-2"><span class="text-amber">•</span> Clé étrangère sans index (jointures lentes)</li>
+          </ul>
+        </article>
+      </div>
+
+      <!-- severity legend -->
+      <div data-reveal class="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-slate">
+        <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-danger"></span> Critique</span>
+        <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber"></span> Avertissement</span>
+        <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-blue"></span> Info</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how" class="bg-sky-3 py-20 md:py-28">
+    <div class="mx-auto max-w-5xl px-6">
+      <h2 data-reveal class="text-center text-3xl font-semibold tracking-tight text-ink md:text-4xl">Un rapport en trois temps</h2>
+      <div class="mt-14 grid gap-8 md:grid-cols-3">
+        <div data-reveal class="rounded-2xl border border-line bg-white p-7">
+          <div class="text-sm font-semibold text-brand">01</div>
+          <h3 class="mt-2 text-lg font-semibold text-ink">Déposez la base</h3>
+          <p class="mt-2 leading-relaxed text-slate">Glissez un fichier <code class="rounded bg-sky-2 px-1 font-mono text-xs">.sqlite</code> / <code class="rounded bg-sky-2 px-1 font-mono text-xs">.db</code>, ou lancez la base de démo en un clic.</p>
+        </div>
+        <div data-reveal class="rounded-2xl border border-line bg-white p-7">
+          <div class="text-sm font-semibold text-brand">02</div>
+          <h3 class="mt-2 text-lg font-semibold text-ink">Le moteur scanne</h3>
+          <p class="mt-2 leading-relaxed text-slate">14 détecteurs parcourent tables et colonnes via les <code class="rounded bg-sky-2 px-1 font-mono text-xs">PRAGMA</code> SQLite natifs.</p>
+        </div>
+        <div data-reveal class="rounded-2xl border border-line bg-white p-7">
+          <div class="text-sm font-semibold text-brand">03</div>
+          <h3 class="mt-2 text-lg font-semibold text-ink">Vous corrigez</h3>
+          <p class="mt-2 leading-relaxed text-slate">Rapport filtrable par gravité + score /100. Le fichier est ensuite supprimé.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEVELOPERS -->
+  <section id="dev" class="bg-navy py-20 md:py-28">
+    <div class="mx-auto grid max-w-6xl items-center gap-12 px-6 lg:grid-cols-2">
+      <div>
+        <p data-reveal class="text-xs font-medium uppercase tracking-wider text-brand-400">Pour les développeurs</p>
+        <h2 data-reveal class="mt-3 text-3xl font-semibold tracking-tight text-white md:text-4xl">Le moteur, sans l'interface</h2>
+        <p data-reveal class="mt-4 max-w-md text-lg leading-relaxed text-white/70">
+          La détection est découplée de l'UI : utilisez-la en bibliothèque Python ou via
+          une API REST FastAPI (doc Swagger auto-générée sur <code class="font-mono text-brand-400">/docs</code>).
+        </p>
+        <ul data-reveal class="mt-6 space-y-3 text-white/80">
+          <li class="flex items-center gap-3"><span class="text-brand-400">✓</span> 1 fonction = 1 contrôle : extensible en quelques lignes</li>
+          <li class="flex items-center gap-3"><span class="text-brand-400">✓</span> Couvert par des tests pytest</li>
+          <li class="flex items-center gap-3"><span class="text-brand-400">✓</span> Zéro dépendance front, déployable partout</li>
+        </ul>
+      </div>
+      <div data-reveal class="space-y-4">
+        <!-- code card: library -->
+        <div class="overflow-hidden rounded-2xl border border-white/10 bg-[#0f1020] shadow-xl">
+          <div class="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+            <span class="h-3 w-3 rounded-full bg-[#ff5f56]"></span>
+            <span class="h-3 w-3 rounded-full bg-[#ffbd2e]"></span>
+            <span class="h-3 w-3 rounded-full bg-[#27c93f]"></span>
+            <span class="ml-2 font-mono text-xs text-white/40">python</span>
+          </div>
+          <pre class="overflow-x-auto p-4 font-mono text-[13px] leading-relaxed text-white/85"><span class="text-purple">from</span> dbughunter <span class="text-purple">import</span> scan_database
+
+report = scan_database(<span class="text-brand-400">"ma_base.sqlite"</span>)
+<span class="text-purple">print</span>(report[<span class="text-brand-400">"summary"</span>][<span class="text-brand-400">"score"</span>])  <span class="text-white/40"># 0–100</span>
+<span class="text-purple">for</span> f <span class="text-purple">in</span> report[<span class="text-brand-400">"findings"</span>]:
+    <span class="text-purple">print</span>(f[<span class="text-brand-400">"severity"</span>], f[<span class="text-brand-400">"table"</span>], f[<span class="text-brand-400">"title"</span>])</pre>
+        </div>
+        <!-- code card: API -->
+        <div class="overflow-hidden rounded-2xl border border-white/10 bg-[#0f1020] shadow-xl">
+          <div class="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+            <span class="ml-1 font-mono text-xs text-white/40">REST API · FastAPI</span>
+          </div>
+          <pre class="overflow-x-auto p-4 font-mono text-[13px] leading-relaxed text-white/85"><span class="text-brand-400">POST</span> /api/scan   <span class="text-white/40"># upload .sqlite → rapport JSON</span>
+<span class="text-brand-400">GET</span>  /api/demo   <span class="text-white/40"># scanne la base de démo</span>
+<span class="text-brand-400">GET</span>  /api/health <span class="text-white/40"># sonde de disponibilité</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY -->
+  <section class="bg-white py-20 md:py-28">
+    <div class="mx-auto max-w-6xl px-6">
+      <h2 data-reveal class="text-center text-3xl font-semibold tracking-tight text-ink md:text-4xl">Pensé pour la confiance</h2>
+      <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div data-reveal class="rounded-2xl border border-line bg-mist p-6">
+          <div class="text-2xl">🔒</div>
+          <h3 class="mt-3 font-semibold text-ink">Privé par défaut</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate">Les fichiers envoyés sont analysés puis supprimés. Rien n'est conservé.</p>
+        </div>
+        <div data-reveal class="rounded-2xl border border-line bg-mist p-6">
+          <div class="text-2xl">🪶</div>
+          <h3 class="mt-3 font-semibold text-ink">Léger</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate">Python + SQLite natif, interface vanilla. Aucun bundler, aucune lourdeur.</p>
+        </div>
+        <div data-reveal class="rounded-2xl border border-line bg-mist p-6">
+          <div class="text-2xl">🧩</div>
+          <h3 class="mt-3 font-semibold text-ink">Extensible</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate">Ajouter un contrôle = une fonction. Le score, l'UI et l'API suivent.</p>
+        </div>
+        <div data-reveal class="rounded-2xl border border-line bg-mist p-6">
+          <div class="text-2xl">🆓</div>
+          <h3 class="mt-3 font-semibold text-ink">Open source</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate">Sous licence MIT, le code est public sur GitHub.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="bg-sky-1 py-20 md:py-28">
+    <div class="mx-auto max-w-3xl px-6">
+      <h2 data-reveal class="text-center text-3xl font-semibold tracking-tight text-ink md:text-4xl">Questions fréquentes</h2>
+      <div class="mt-10 space-y-3">
+        <details data-reveal open class="group rounded-2xl border border-line bg-white p-5 [&_summary::-webkit-details-marker]:hidden">
+          <summary class="flex cursor-pointer items-center justify-between font-medium text-ink">Quels formats de base sont acceptés ?<span class="text-xl text-brand transition group-open:rotate-45">+</span></summary>
+          <p class="mt-3 leading-relaxed text-slate">Tout fichier SQLite : <code class="font-mono text-sm">.db</code>, <code class="font-mono text-sm">.sqlite</code>, <code class="font-mono text-sm">.sqlite3</code>, <code class="font-mono text-sm">.db3</code>.</p>
+        </details>
+        <details data-reveal class="group rounded-2xl border border-line bg-white p-5 [&_summary::-webkit-details-marker]:hidden">
+          <summary class="flex cursor-pointer items-center justify-between font-medium text-ink">Mes données sont-elles conservées ?<span class="text-xl text-brand transition group-open:rotate-45">+</span></summary>
+          <p class="mt-3 leading-relaxed text-slate">Non. Le fichier est analysé en mémoire puis supprimé : rien n'est stocké côté serveur.</p>
+        </details>
+        <details data-reveal class="group rounded-2xl border border-line bg-white p-5 [&_summary::-webkit-details-marker]:hidden">
+          <summary class="flex cursor-pointer items-center justify-between font-medium text-ink">Comment est calculé le score /100 ?<span class="text-xl text-brand transition group-open:rotate-45">+</span></summary>
+          <p class="mt-3 leading-relaxed text-slate">Une base sans problème part de 100 ; chaque finding retire des points selon sa gravité (critique &gt; avertissement &gt; info).</p>
+        </details>
+        <details data-reveal class="group rounded-2xl border border-line bg-white p-5 [&_summary::-webkit-details-marker]:hidden">
+          <summary class="flex cursor-pointer items-center justify-between font-medium text-ink">Puis-je l'utiliser hors interface web ?<span class="text-xl text-brand transition group-open:rotate-45">+</span></summary>
+          <p class="mt-3 leading-relaxed text-slate">Oui — en bibliothèque Python (<code class="font-mono text-sm">scan_database()</code>) ou via l'API REST FastAPI.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="grid-bg relative overflow-hidden bg-navy py-24 text-center">
+    <div class="pointer-events-none absolute left-1/2 top-0 h-48 w-[30rem] -translate-x-1/2 rounded-full bg-brand/20 blur-3xl"></div>
+    <div class="relative mx-auto max-w-2xl px-6">
+      <div class="mb-4 text-4xl">🐛</div>
+      <h2 data-reveal class="text-4xl font-bold tracking-tight text-white">Scannez votre base maintenant</h2>
+      <p data-reveal class="mt-4 text-white/70">Gratuit, instantané, aucune inscription. Testez sur la base de démo en un clic.</p>
+      <div data-reveal class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+        <a href="https://louey9999-dbug-hunter.hf.space" target="_blank" rel="noopener"
+           class="rounded-xl bg-brand px-7 py-3.5 font-medium text-white transition hover:bg-brand-700">▶ Lancer la démo</a>
+        <a href="https://github.com/baluva/dbug-hunter" target="_blank" rel="noopener"
+           class="rounded-xl border border-white/15 px-7 py-3.5 font-medium text-white/90 transition hover:bg-white/5">⭐ Star sur GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="bg-charcoal py-12 text-sm text-white/60">
+    <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 md:flex-row">
+      <div class="flex items-center gap-2 text-white/80"><span>🐛</span> DBug Hunter — Python · FastAPI</div>
+      <div class="flex flex-wrap items-center justify-center gap-6">
+        <a href="https://louey9999-dbug-hunter.hf.space" target="_blank" rel="noopener" class="hover:text-white">Démo</a>
+        <a href="https://github.com/baluva/dbug-hunter" target="_blank" rel="noopener" class="hover:text-white">GitHub</a>
+        <a href="https://louey9999-dbug-hunter.hf.space/docs" target="_blank" rel="noopener" class="hover:text-white">API (Swagger)</a>
+        <span>MIT · par <a href="https://github.com/baluva" target="_blank" rel="noopener" class="text-white/80 hover:text-white">Louey Barbirou</a></span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Count-up animation
+    function countUp(el) {
+      const target = +el.dataset.count;
+      const dur = 1200, start = performance.now();
+      const suffix = el.dataset.suffix || "";
+      function tick(now) {
+        const p = Math.min((now - start) / dur, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.round(target * eased) + suffix;
+        if (p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+    function fillRing(el) {
+      const pct = +el.dataset.ring;
+      const circ = 2 * Math.PI * 52;
+      el.style.strokeDashoffset = circ * (1 - pct / 100);
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        e.target.classList.add("in");
+        if (e.target.dataset.count !== undefined) countUp(e.target);
+        e.target.querySelectorAll?.("[data-ring]").forEach(fillRing);
+        if (e.target.dataset.ring !== undefined) fillRing(e.target);
+        io.unobserve(e.target);
+      });
+    }, { threshold: 0.2 });
+    document.querySelectorAll("[data-reveal]").forEach((el, i) => {
+      el.style.transitionDelay = (i % 6) * 70 + "ms";
+      io.observe(el);
+    });
+    // counters / rings that aren't themselves [data-reveal] (e.g. the hero score)
+    document.querySelectorAll("[data-ring]").forEach((el) => io.observe(el));
+    document.querySelectorAll("[data-count]").forEach((el) => io.observe(el));
+
+    // Nav condense on scroll
+    const nav = document.getElementById("nav");
+    const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 40);
+    onScroll();
+    addEventListener("scroll", onScroll, { passive: true });
+  </script>
+</body>
+</html>
