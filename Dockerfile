@@ -10,8 +10,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Code applicatif.
-COPY --chown=user:user . .
+# Code applicatif. On donne la propriété de tout /app à l'utilisateur non-root
+# (le dossier /app créé par WORKDIR appartient à root, sinon écriture impossible).
+COPY . .
+RUN chown -R user:user /app
 
 USER user
 ENV HOME=/home/user \
